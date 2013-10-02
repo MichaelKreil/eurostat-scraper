@@ -1,12 +1,9 @@
 var fs = require('fs');
 var request = require('request');
 var xml2js = require('xml2js');
-var unzip = require('unzip');
+var AdmZip = require('adm-zip');
 var path = require('path');
 var async = require('async');
-var Stream = require('stream');
-var Buffer = require('buffer');
-var Bufferstream = require('bufferstream');
 
 get('table_of_contents.xml', function (result) {
 	result = result.toString('utf8');
@@ -21,7 +18,7 @@ get('table_of_contents.xml', function (result) {
 
 	var urlList = Object.keys(urls).map(function (url) { return url });
 
-	async.eachLimit(urlList, 2,
+	async.eachLimit(urlList, 1,
 		function (url, callback) {
 			getSDMX(url, function (sdmx) {
 				callback();
@@ -73,40 +70,25 @@ function getSDMX(file, callback) {
 		});
 	} else {
 		get(file, function (data) {
-			var unzipper = unzip.Parse();
-			var result = {};
-			
+			var zip = new AdmZip(data);
 			var basename = file.replace(/^.*\//g, '').replace(/\.sdmx.*$/g, '');
-			console.log('SDMX-Unzipping '+file);
+			var result = {};
 
-			unzipper.on('entry', function (entry) {
-				var stream, filename;
-				switch (entry.path) {
-					case basename +  '.dsd.xml': filename = pathmeta; stream = result.meta = new Bufferstream({encoding:'utf8', size:'flexible'}); break;
-					case basename + '.sdmx.xml': filename = pathdata; stream = result.data = new Bufferstream({encoding:'utf8', size:'flexible'}); break;
-				}
-				if (stream) {
-					stream.on('close', function () {
-						fs.writeFileSync(filename, stream.getBuffer());
-					});
-					entry.pipe(stream);
+			zip.getEntries().forEach(function (entry) {
+				var data = entry.getData();
+				switch (entry.name) {
+					case basename +  '.dsd.xml':
+						fs.writeFileSync(pathmeta, data);
+						result.meta = data;
+					break;
+					case basename + '.sdmx.xml':
+						fs.writeFileSync(pathdata, data);
+						result.data = data;
+					break;
 				}
 			});
 
-
-			var stream = new Stream.Readable();
-			stream._read = function () {
-				stream.push(data);
-				data = null;
-			}
-
-			unzipper.on('close', function () {
-				if (result.meta && !result.meta.finished) result.meta.end();
-				if (result.data && !result.data.finished) result.data.end();
-				callback(result);
-			});
-			
-			stream.pipe(unzipper);
+			callback(result);
 		})
 	}
 }
