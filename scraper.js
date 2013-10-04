@@ -35,7 +35,9 @@ function get(file, callback) {
 	var path = getCacheFilename(file, 'download');
 	if (fs.existsSync(path)) {
 		console.info('Loading '+file);
-		callback(fs.readFileSync(path));
+		setTimeout(function () {
+			callback(fs.readFileSync(path));
+		}, 0);
 	} else {
 		console.info('Downloading '+file);
 		request({url:url, encoding:null}, function (error, response, body) {
@@ -64,10 +66,13 @@ function getSDMX(file, callback) {
 
 	if (fs.existsSync(pathdata) && fs.existsSync(pathmeta)) {
 		console.log('SDMX-Loading '+file);
-		callback({
-			data:fs.readFileSync(pathdata),
-			meta:fs.readFileSync(pathmeta)
-		});
+
+		setTimeout(function () {
+			callback({
+				//data:fs.readFileSync(pathdata),
+				//meta:fs.readFileSync(pathmeta)
+			});
+		}, 0);
 	} else {
 		get(file, function (data) {
 			var zip = new AdmZip(data);
