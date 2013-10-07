@@ -25,7 +25,7 @@ get('table_of_contents.xml', function (result) {
 		function (url, callback) {
 			getSDMX(url, function (sdmx) {
 				callback();
-			})
+			}, false)
 		},
 		function (err) {
 			console.error('Error', err);
@@ -62,7 +62,7 @@ function getXML(file, callback) {
 	});
 }
 
-function getSDMX(file, callback) {
+function getSDMX(file, callback, doReturn) {
 	var basename = file.replace(/^.*\//g, '').replace(/\.sdmx.*$/g, '');
 	var pathdata = getCacheFilename(basename+'.sdmx.xml', 'sdmx', false);
 	var pathmeta = getCacheFilename(basename+'.dsd.xml',  'sdmx', false);
@@ -71,10 +71,14 @@ function getSDMX(file, callback) {
 		console.log('SDMX-Loading '+file);
 
 		setTimeout(function () {
-			callback({
-				//data:fs.readFileSync(pathdata),
-				//meta:fs.readFileSync(pathmeta)
-			});
+			if (doReturn) {
+				callback({
+					data:fs.readFileSync(pathdata),
+					meta:fs.readFileSync(pathmeta)
+				});
+			} else {
+				callback();
+			}
 		}, 0);
 	} else {
 		get(file, function (data) {
@@ -95,7 +99,14 @@ function getSDMX(file, callback) {
 				}
 			});
 
-			callback(result);
+			if (doReturn) {
+				callback({
+					data:fs.readFileSync(pathdata),
+					meta:fs.readFileSync(pathmeta)
+				});
+			} else {
+				callback();
+			}
 		})
 	}
 }
