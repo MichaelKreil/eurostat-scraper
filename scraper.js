@@ -63,9 +63,9 @@ function getXML(file, callback) {
 }
 
 function getSDMX(file, callback) {
-	var path = getCacheFilename(file, 'sdmx');
-	var pathdata = path+'.data';
-	var pathmeta = path+'.meta';
+	var basename = file.replace(/^.*\//g, '').replace(/\.sdmx.*$/g, '');
+	var pathdata = getCacheFilename(basename+'.sdmx.xml', 'sdmx', false);
+	var pathmeta = getCacheFilename(basename+'.dsd.xml',  'sdmx', false);
 
 	if (fs.existsSync(pathdata) && fs.existsSync(pathmeta)) {
 		console.log('SDMX-Loading '+file);
@@ -79,13 +79,12 @@ function getSDMX(file, callback) {
 	} else {
 		get(file, function (data) {
 			var zip = new AdmZip(data);
-			var basename = file.replace(/^.*\//g, '').replace(/\.sdmx.*$/g, '');
 			var result = {};
 
 			zip.getEntries().forEach(function (entry) {
 				var data = entry.getData();
 				switch (entry.name) {
-					case basename +  '.dsd.xml':
+					case basename + '.dsd.xml':
 						fs.writeFileSync(pathmeta, data);
 						result.meta = data;
 					break;
@@ -101,8 +100,9 @@ function getSDMX(file, callback) {
 	}
 }
 
-function getCacheFilename(file, subfolder) {
-	var filename = config.cacheFolder + (subfolder ? subfolder+'/' : '') + file.replace(/[\\\/\.]/g, '_');
+function getCacheFilename(file, subfolder, replace) {
+	if (replace !== false) file = file.replace(/[\\\/\.]/g, '_');
+	var filename = config.cacheFolder + (subfolder ? subfolder+'/' : '') + file;
 	ensureFolder(filename);
 	return filename;
 }
