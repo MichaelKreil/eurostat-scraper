@@ -5,6 +5,9 @@ var AdmZip = require('adm-zip');
 var path = require('path');
 var async = require('async');
 
+var config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+
+
 get('table_of_contents.xml', function (result) {
 	result = result.toString('utf8');
 	var downloads = result.match(/<nt:downloadLink format=\"sdmx\">.*?<\/nt:downloadLink>/g);
@@ -99,7 +102,7 @@ function getSDMX(file, callback) {
 }
 
 function getCacheFilename(file, subfolder) {
-	var filename = '../cache/' + (subfolder ? subfolder+'/' : '') + file.replace(/[\\\/\.]/g, '_');
+	var filename = config.cacheFolder + (subfolder ? subfolder+'/' : '') + file.replace(/[\\\/\.]/g, '_');
 	ensureFolder(filename);
 	return filename;
 }
