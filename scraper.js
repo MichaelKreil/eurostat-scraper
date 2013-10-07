@@ -82,6 +82,7 @@ function getSDMX(file, callback, doReturn) {
 		}, 0);
 	} else {
 		get(file, function (data) {
+			console.log('SDMX-Unzipping '+file);
 			var zip = new AdmZip(data);
 			var result = {};
 
