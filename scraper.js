@@ -23,7 +23,7 @@ get('table_of_contents.xml', function (result) {
 
 	async.eachLimit(urlList, 4,
 		function (url, callback) {
-			getSDMX(url, function (sdmx) {
+			get(url, function (sdmx) {
 				callback();
 			}, false)
 		},
