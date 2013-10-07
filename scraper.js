@@ -18,7 +18,7 @@ get('table_of_contents.xml', function (result) {
 
 	var urlList = Object.keys(urls).map(function (url) { return url });
 
-	async.eachLimit(urlList, 1,
+	async.eachLimit(urlList, 4,
 		function (url, callback) {
 			getSDMX(url, function (sdmx) {
 				callback();
