@@ -1,4 +1,4 @@
 {
-	"cacheFolder": "/Volumes/public/motor/eurostat/cache/",
-	"resultFolder": "/Volumes/public/motor/eurostat/data/"
+	"cacheFolder": "../cache/",
+	"resultFolder": "../data/"
 }

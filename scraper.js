@@ -8,23 +8,74 @@ var async = require('async');
 var config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
 
-get('table_of_contents.xml', function (result) {
+getCached(config.cacheFolder+'table_of_contents.xml', 'http://epp.eurostat.ec.europa.eu/NavTree_prod/everybody/BulkDownloadListing?sort=1&file=table_of_contents.xml', function (result) {
 	result = result.toString('utf8');
-	var downloads = result.match(/<nt:downloadLink format=\"sdmx\">.*?<\/nt:downloadLink>/g);
-	var urls = {};
+	result = result.replace(/[\s\t\r\n]+/g, ' ');
+	var datasets = result.match(/<nt:leaf type=\"dataset\">.*?<\/nt:leaf>/g);
+	var codes = {};
+
+	function findReg(text, regexp) {
+		var result = text.match(regexp);
+		if (result == null) return false;
+		return result[1];
+	}
 	
-	downloads.forEach(function (link) {
-		var url = link.match(/<nt:downloadLink format=\"sdmx\">http:\/\/epp.eurostat.ec.europa.eu\/NavTree_prod\/everybody\/BulkDownloadListing\?file=(.*?)<\/nt:downloadLink>/);
-		url = url[1];
-		urls[url] = true;
+	datasets.forEach(function (dataset) {
+		var code = dataset.match(/<nt:code>(.*?)<\/nt:code>/)[1];
+		codes[code] = {
+			code:      code,
+			
+			update:    findReg(dataset, /<nt:lastUpdate>(.*?)<\/nt:lastUpdate>/),
+			meta_html: findReg(dataset, /<nt:metadata format=\"html\">(.*?)<\/nt:metadata>/),
+			meta_sdmx: findReg(dataset, /<nt:metadata format=\"sdmx\">(.*?)<\/nt:metadata>/),
+			tsv:       findReg(dataset, /<nt:downloadLink format=\"tsv\">(.*?)<\/nt:downloadLink>/),
+			dft:       findReg(dataset, /<nt:downloadLink format=\"dft\">(.*?)<\/nt:downloadLink>/),
+			sdmx:      findReg(dataset, /<nt:downloadLink format=\"sdmx\">(.*?)<\/nt:downloadLink>/)//"
+		}
 	});
 
-	var urlList = Object.keys(urls).map(function (url) { return url });
+	datasets = Object.keys(codes).map(function (code) { return codes[code] });
 
-	async.eachLimit(urlList, 4,
-		function (url, callback) {
-			getSDMX(url, function (sdmx) {
-				callback();
+	async.eachLimit(datasets, 4,
+		function (dataset, callback) {
+			files = [];
+			if (dataset.meta_html) {
+				files.push({
+					local:config.resultFolder+'meta_html/'+dataset.code+'.html',
+					url:dataset.meta_html
+				});
+			}
+			if (dataset.meta_sdmx) {
+				files.push({
+					local:config.cacheFolder+'meta_sdmx/'+dataset.code+'.sdmx.zip',
+					url:dataset.meta_sdmx
+				});
+			}
+			if (dataset.tsv) {
+				files.push({
+					local:config.cacheFolder+'tsv/'+dataset.code+'.tsv.gz',
+					url:dataset.tsv
+				});
+			}
+			if (dataset.dft) {
+				files.push({
+					local:config.cacheFolder+'dft/'+dataset.code+'.dft.gz',
+					url:dataset.dft
+				});
+			}
+			if (dataset.sdmx) {
+				files.push({
+					local:config.cacheFolder+'sdmx/'+dataset.code+'.sdmx.zip',
+					url:dataset.sdmx
+				});
+			}
+
+			async.eachSeries(files, function (file, callback) {
+				getCached(file.local, file.url, function () {
+					callback();
+				});
+			}, function () {
+				callback()
 			})
 		},
 		function (err) {
@@ -33,26 +84,30 @@ get('table_of_contents.xml', function (result) {
 	);
 })
 
-function get(file, callback, dontLoad) {
-	var url = 'http://epp.eurostat.ec.europa.eu/NavTree_prod/everybody/BulkDownloadListing?file='+file;
-	var path = getCacheFilename(file, 'download');
+function get(url, callback) {
+
+	request({url:url, encoding:null}, function (error, response, body) {
+		if (error) console.error(error);
+		callback(body);
+	});
+
+	return;
+	/*
+
+	var path = getCacheFilename(url);
 	if (fs.existsSync(path)) {
-		console.info('Loading '+file);
+		console.info('Loading '+url);
 		setTimeout(function () {
-			if (dontLoad) {
-				callback();
-			} else {
-				callback(fs.readFileSync(path));
-			}
+			callback(fs.readFileSync(path));
 		}, 0);
 	} else {
-		console.info('Downloading '+file);
+		console.info('Downloading '+url);
 		request({url:url, encoding:null}, function (error, response, body) {
 			if (error) console.error(error);
 			fs.writeFileSync(path, body);
 			callback(body);
 		})
-	}
+	}*/
 }
 
 function getXML(file, callback) {
@@ -118,8 +173,35 @@ function getSDMX(file, callback, dontLoad) {
 	}
 }
 
+
+function getCached(file, url, callback, dontLoad) {
+	ensureFolder(file);
+
+	if (fs.existsSync(file)) {
+		console.log('File-Loading '+file);
+
+		setTimeout(function () {
+			if (dontLoad) {
+				callback();
+			} else {
+				callback(fs.readFileSync(file));
+			}
+		}, 0);
+	} else {
+		console.log('File-Downloading '+file);
+		get(url, function (data) {
+			fs.writeFileSync(file, data)
+			if (dontLoad) {
+				callback();
+			} else {
+				callback(data);
+			}
+		})
+	}
+}
+
 function getCacheFilename(file, subfolder) {
-	var filename = config.cacheFolder + (subfolder ? subfolder+'/' : '') + file.replace(/[\\\/\.]/g, '_');
+	var filename = config.cacheFolder + 'download/' + (subfolder ? subfolder+'/' : '') + file.replace(/[\\\/\.]/g, '_');
 	ensureFolder(filename);
 	return filename;
 }
