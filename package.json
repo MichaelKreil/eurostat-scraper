@@ -3,8 +3,8 @@
 		"start": "node scraper.js"
 	},
 	"private": true,
-	"name": "eurostat scraper",
-	"version": "0.1",
+	"name": "eurostat_scraper",
+	"version": "0.1.0",
 	"dependencies": {
 		"adm-zip": ">= 0.4.3",
 		"async": ">= 0.2.9",
