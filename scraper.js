@@ -36,6 +36,8 @@ getCached(config.cacheFolder+'table_of_contents.xml', 'http://epp.eurostat.ec.eu
 
 	datasets = Object.keys(codes).map(function (code) { return codes[code] });
 
+	if (config.limit && (datasets.length > config.limit)) datasets.length = config.limit;
+
 	async.eachLimit(datasets, 4,
 		function (dataset, callback) {
 			files = [];
