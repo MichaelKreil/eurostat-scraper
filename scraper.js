@@ -23,9 +23,9 @@ get('table_of_contents.xml', function (result) {
 
 	async.eachLimit(urlList, 4,
 		function (url, callback) {
-			get(url, function (sdmx) {
+			getSDMX(url, function (sdmx) {
 				callback();
-			}, true)
+			})
 		},
 		function (err) {
 			console.error('Error', err);
@@ -91,16 +91,18 @@ function getSDMX(file, callback, dontLoad) {
 			var result = {};
 
 			zip.getEntries().forEach(function (entry) {
-				var data = entry.getData();
-				switch (entry.name) {
-					case basename + '.dsd.xml':
-						fs.writeFileSync(pathmeta, data);
-						result.meta = data;
-					break;
-					case basename + '.sdmx.xml':
-						fs.writeFileSync(pathdata, data);
-						result.data = data;
-					break;
+				if (entry.header.size < (1 << 30)) {
+					var data = entry.getData();
+					switch (entry.name) {
+						case basename + '.dsd.xml':
+							fs.writeFileSync(pathmeta, data);
+							result.meta = data;
+						break;
+						case basename + '.sdmx.xml':
+							fs.writeFileSync(pathdata, data);
+							result.data = data;
+						break;
+					}
 				}
 			});
 
