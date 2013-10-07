@@ -1,5 +1,8 @@
 
+\.DS_Store
+
+\._\.DS_Store
+
 node_modules
+
 config.json
-.DS_Store
-._.DS_Store
