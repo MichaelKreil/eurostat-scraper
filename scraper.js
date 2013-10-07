@@ -25,7 +25,7 @@ get('table_of_contents.xml', function (result) {
 		function (url, callback) {
 			get(url, function (sdmx) {
 				callback();
-			}, false)
+			}, true)
 		},
 		function (err) {
 			console.error('Error', err);
@@ -33,13 +33,17 @@ get('table_of_contents.xml', function (result) {
 	);
 })
 
-function get(file, callback) {
+function get(file, callback, dontLoad) {
 	var url = 'http://epp.eurostat.ec.europa.eu/NavTree_prod/everybody/BulkDownloadListing?file='+file;
 	var path = getCacheFilename(file, 'download');
 	if (fs.existsSync(path)) {
 		console.info('Loading '+file);
 		setTimeout(function () {
-			callback(fs.readFileSync(path));
+			if (dontLoad) {
+				callback();
+			} else {
+				callback(fs.readFileSync(path));
+			}
 		}, 0);
 	} else {
 		console.info('Downloading '+file);
@@ -62,7 +66,7 @@ function getXML(file, callback) {
 	});
 }
 
-function getSDMX(file, callback, doReturn) {
+function getSDMX(file, callback, dontLoad) {
 	var basename = file.replace(/^.*\//g, '').replace(/\.sdmx.*$/g, '');
 	var pathdata = getResultFilename(basename+'.sdmx.xml', 'sdmx');
 	var pathmeta = getResultFilename(basename+'.dsd.xml',  'sdmx');
@@ -71,13 +75,13 @@ function getSDMX(file, callback, doReturn) {
 		console.log('SDMX-Loading '+file);
 
 		setTimeout(function () {
-			if (doReturn) {
+			if (dontLoad) {
+				callback();
+			} else {
 				callback({
 					data:fs.readFileSync(pathdata),
 					meta:fs.readFileSync(pathmeta)
 				});
-			} else {
-				callback();
 			}
 		}, 0);
 	} else {
@@ -100,13 +104,13 @@ function getSDMX(file, callback, doReturn) {
 				}
 			});
 
-			if (doReturn) {
+			if (dontLoad) {
+				callback();
+			} else {
 				callback({
 					data:fs.readFileSync(pathdata),
 					meta:fs.readFileSync(pathmeta)
 				});
-			} else {
-				callback();
 			}
 		})
 	}
