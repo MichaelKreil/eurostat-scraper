@@ -25,7 +25,7 @@ get('table_of_contents.xml', function (result) {
 			})
 		},
 		function (err) {
-			console.log(err);
+			console.error('Error', err);
 		}
 	);
 })
