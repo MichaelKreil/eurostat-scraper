@@ -94,24 +94,35 @@ function get(url, callback) {
 	});
 
 	return;
-	/*
-
-	var path = getCacheFilename(url);
-	if (fs.existsSync(path)) {
-		console.info('Loading '+url);
-		setTimeout(function () {
-			callback(fs.readFileSync(path));
-		}, 0);
-	} else {
-		console.info('Downloading '+url);
-		request({url:url, encoding:null}, function (error, response, body) {
-			if (error) console.error(error);
-			fs.writeFileSync(path, body);
-			callback(body);
-		})
-	}*/
 }
 
+
+function getCached(file, url, callback, dontLoad) {
+	if (fs.existsSync(file)) {
+		console.log('File-Loading '+file);
+
+		setTimeout(function () {
+			if (dontLoad) {
+				callback();
+			} else {
+				callback(fs.readFileSync(file));
+			}
+		}, 0);
+	} else {
+		ensureFolder(file);
+		console.log('File-Downloading '+file);
+		get(url, function (data) {
+			fs.writeFileSync(file, data)
+			if (dontLoad) {
+				callback();
+			} else {
+				callback(data);
+			}
+		})
+	}
+}
+
+/*
 function getXML(file, callback) {
 	get(file, function (result) {
 		console.info('XML-Parsing '+file);
@@ -174,45 +185,7 @@ function getSDMX(file, callback, dontLoad) {
 		})
 	}
 }
-
-
-function getCached(file, url, callback, dontLoad) {
-	ensureFolder(file);
-
-	if (fs.existsSync(file)) {
-		console.log('File-Loading '+file);
-
-		setTimeout(function () {
-			if (dontLoad) {
-				callback();
-			} else {
-				callback(fs.readFileSync(file));
-			}
-		}, 0);
-	} else {
-		console.log('File-Downloading '+file);
-		get(url, function (data) {
-			fs.writeFileSync(file, data)
-			if (dontLoad) {
-				callback();
-			} else {
-				callback(data);
-			}
-		})
-	}
-}
-
-function getCacheFilename(file, subfolder) {
-	var filename = config.cacheFolder + 'download/' + (subfolder ? subfolder+'/' : '') + file.replace(/[\\\/\.]/g, '_');
-	ensureFolder(filename);
-	return filename;
-}
-
-function getResultFilename(file, subfolder) {
-	var filename = config.resultFolder + (subfolder ? subfolder+'/' : '') + file;
-	ensureFolder(filename);
-	return filename;
-}
+*/
 
 function ensureFolder(folder) {
 	folder = path.resolve(path.dirname(require.main.filename), folder);
