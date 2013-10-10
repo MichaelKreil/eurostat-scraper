@@ -13,24 +13,32 @@ var downloadList = [];
 var visitedDirs = {};
 
 
-scan('', function () {
+// Scanne das Verzeichnis und lade alle runter
+scan('', downloadAll);
+
+
+// Lade alle gefundenen Dateien runter.
+function downloadAll() {
 	Async.eachLimit(
 		downloadList,
-		4,
+		4, // Lade bis zu 4 Dateien gleichzeitig
 		function (file, callback) {
 			var overwrite = true;
 			var remoteFile = downloadPath+file.download.replace(/\//g, '%2F');
 			var resultFile = resultPath+file.download;
+
+			// Wenn die Datei schon existiert und neuer ist, als auf dem Server,
+			// dann überschreibe die lokale Version nicht.
 			if (FS.existsSync(resultFile)) {
 				var stat = FS.statSync(resultFile);
 				if (file.time < stat.mtime) overwrite = false;
 			}
 
-			//if (file.size.indexOf('MB') >= 0) overwrite = false;
-
 			if (overwrite) {
 				console.log('Downloading: '+file.download);
+				
 				ensureFolder(resultFile);
+
 				var stream = Request(remoteFile);
 				stream.pipe(FS.createWriteStream(resultFile))
 				stream.on('end', callback);
@@ -43,8 +51,10 @@ scan('', function () {
 			console.log('Finished')
 		}
 	)
-});
+}
 
+
+// Scanne die Verzeichnisse rekursiv
 function scan(url, callback) {
 	if (visitedDirs[url]) {
 		callback();
@@ -66,23 +76,24 @@ function scan(url, callback) {
 	)
 }
 
+// Durchsuche eine index-Seite nach Links
 function scanPage(body, callback) {
 	var filetable = body.match(/class=\"filelist\"(.*?)<\/table>/)[1];
 	var files = filetable.match(/<tr .*?<\/tr>/g).map(function (row) {
 		var cells = row.match(/<td.*?<\/td>/g);
 		cells = cells.map(function (cell) {
-			var result = {
-				html: cell,
-				text: cell.replace(/<.*?>/g, '').replace(/&nbsp;/g, ' ').replace(/^\s+|\s+$/g, '')
-			};
+			var result = { text: cell.replace(/<.*?>/g, '').replace(/&nbsp;/g, ' ').replace(/^\s+|\s+$/g, '') };
+
 			var href = cell.match(/href=\"(.*?)\"/);
 			if (href) {
 				var url = href[1].replace(/&amp;/g, '&');
 				result.url = url;
 				result.query = Url.parse(url, true).query;
 			}
+
 			return result;
 		});
+
 		var result = {
 			title: cells[0].text,
 			url: cells[0].url,
@@ -98,7 +109,9 @@ function scanPage(body, callback) {
 		if (cells[0].query) {
 			result.dir = cells[0].query.dir && cells[0].query.dir.replace(/%2F/gi, '/');
 		}
+
 		if (cells[4].query) result.download = cells[4].query.downfile;
+
 		return result;
 	});
 
@@ -110,10 +123,9 @@ function scanPage(body, callback) {
 				callback();
 				return;
 			}
+
 			if (file.isDir) {
-				scan(file.dir, function () {
-					callback()
-				});
+				scan(file.dir, callback);
 			} else {
 				downloadList.push(file);
 				setTimeout(callback,0);
@@ -138,38 +150,36 @@ function get(url, callback) {
 	return;
 }
 
-function getCached(file, url, callback, dontLoad) {
+function getCached(file, url, callback) {
 	if (FS.existsSync(file)) {
+
 		console.log('File-Loading '+file);
 
 		setTimeout(function () {
-			if (dontLoad) {
-				callback();
-			} else {
-				callback(FS.readFileSync(file));
-			}
+			callback(FS.readFileSync(file));
 		}, 0);
+
 	} else {
+
 		ensureFolder(file);
 		console.log('File-Downloading '+url);
 		get(url, function (data) {
 			FS.writeFileSync(file, data)
-			if (dontLoad) {
-				callback();
-			} else {
-				callback(data);
-			}
+			callback(data);
 		})
+
 	}
 }
 
 function ensureFolder(folder) {
 	folder = Path.resolve(Path.dirname(require.main.filename), folder);
+
 	var rec = function (fol) {
 		if (fol != '/') {
 			rec(Path.dirname(fol));
 			if (!FS.existsSync(fol)) FS.mkdirSync(fol);
 		}
 	}
+	
 	rec(Path.dirname(folder));
 }
