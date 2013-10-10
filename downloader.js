@@ -110,6 +110,11 @@ function scanPage(body, callback) {
 				callback();
 				return;
 			}
+			if (file.dir == 'comext' || file.dir == 'comp') {
+				// ignorieren
+				callback();
+				return;
+			}
 			if (file.isDir) {
 				scan(file.dir, function () {
 					callback()
