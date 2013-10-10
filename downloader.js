@@ -136,11 +136,13 @@ function scanPage(body, callback) {
 			}
 
 			if (file.isDir) {
+				/*
 				if ('_comext'.indexOf('_'+file.dir) >= 0) {
 					// ignorieren
 					callback();
 					return;
 				}
+				*/
 
 				if (file.dir == 'data') {
 					Async.eachSeries(
