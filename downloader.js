@@ -136,7 +136,7 @@ function scanPage(body, callback) {
 			}
 
 			if (file.isDir) {
-				if ('_comp_comext_dic_metadata'.indexOf('_'+file.dir) >= 0) {
+				if ('_comext'.indexOf('_'+file.dir) >= 0) {
 					// ignorieren
 					callback();
 					return;
