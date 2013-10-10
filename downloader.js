@@ -26,7 +26,7 @@ scan('', function () {
 				if (file.time < stat.mtime) overwrite = false;
 			}
 
-			if (file.size.indexOf('MB') >= 0) overwrite = false;
+			//if (file.size.indexOf('MB') >= 0) overwrite = false;
 
 			if (overwrite) {
 				console.log('Downloading: '+file.download);
