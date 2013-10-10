@@ -55,15 +55,26 @@ function downloadAll() {
 
 
 // Scanne die Verzeichnisse rekursiv
-function scan(url, callback) {
-	if (visitedDirs[url]) {
+function scan(url, callback, suffix) {
+	var  localFile = cachedPath + url + '/index';
+	var remoteFile = remotePath + url.replace(/\//g, '%2F');
+
+	if (suffix) {
+		 localFile += suffix.replace(/[=\?\&]/g, '_');
+		remoteFile += suffix;
+	}
+
+	localFile += '.html';
+
+
+	if (visitedDirs[remoteFile]) {
 		callback();
 		return
 	}
-	visitedDirs[url] = true;
+	visitedDirs[remoteFile] = true;
+	
 
-	var localFile = cachedPath+url+'/index.html';
-	var remoteFile = remotePath+url.replace(/\//g, '%2F');
+
 	getCached(
 		localFile,
 		remoteFile,
@@ -96,10 +107,10 @@ function scanPage(body, callback) {
 
 		var result = {
 			title: cells[0].text,
-			url: cells[0].url,
-			size: cells[1].text,
+			url:   cells[0].url,
+			size:  cells[1].text,
 			isDir: cells[2].text == 'DIR',
-			date: cells[3].text,
+			date:  cells[3].text,
 		};
 
 		var d = result.date;
@@ -125,7 +136,26 @@ function scanPage(body, callback) {
 			}
 
 			if (file.isDir) {
-				scan(file.dir, callback);
+				if ('_comp_comext_dic_metadata'.indexOf('_'+file.dir) >= 0) {
+					// ignorieren
+					callback();
+					return;
+				}
+
+				if (file.dir == 'data') {
+					Async.eachSeries(
+						['DFT', 'TSV', 'SDMX'],
+						function (filter, callback) {
+							scan(file.dir, callback, '&filter='+filter);
+						},
+						function (err) {
+							if (err) console.error(err);
+							callback();
+						}
+					);
+				} else {
+					scan(file.dir, callback);
+				}
 			} else {
 				downloadList.push(file);
 				setTimeout(callback,0);
@@ -180,6 +210,6 @@ function ensureFolder(folder) {
 			if (!FS.existsSync(fol)) FS.mkdirSync(fol);
 		}
 	}
-	
+
 	rec(Path.dirname(folder));
 }
